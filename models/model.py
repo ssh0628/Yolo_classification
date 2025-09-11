@@ -22,10 +22,17 @@ def classification(image_bytes: bytes):
         conf = probs.top1conf.item()
         predicted_class_name = class_names[ans_idx]
 
+        # 모든 클래스별 예측 값
+        all_probs = probs.data.tolist()
+        all_predict = {
+            class_names[i]: prob for i, prob in enumerate(all_probs)
+        }
+
         return {
             "predicted_class": predicted_class_name,
             "confidence": f"{conf:.4f}",
             "class_index": ans_idx,
+            "all_predict": all_predict, 
         }
 
     except Exception as e:

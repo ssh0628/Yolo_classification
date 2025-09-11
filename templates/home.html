@@ -84,11 +84,73 @@
             display: none;
             margin: 1.5rem auto 0;
         }
-        #result-container {
+        /* #result-container {
             margin-top: 1.5rem;
             font-size: 1.2rem;
             color: #333;
+        } */
+        #result-container {
+            margin-top: 1.5rem;
+            width: 100%;
+            text-align: left;
+            /* background-color: #f8f9fa;  배경색 추가로 영역 구분 */
+            /* border-radius: 8px;  부드러운 모서리 */
+            /* padding: 1rem; 내부 여백 */
+            /* border: 1px solid #e9ecef; 얇은 테두리 */
         }
+        .top-prediction {
+            font-size: 1.15rem;
+            font-weight: 600; /* 폰트 굵기 조정 */
+            text-align: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .top-prediction strong {
+            font-size: 1.2rem;
+            color: #007bff; /* 강조 색상 */
+        }
+        .all-predict-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .all-predict-list li {
+            display: flex;
+            align-items: center;
+            gap: 10px; /* 요소 사이의 간격 */
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+        .class-name {
+            font-weight: 500;
+            width: 50px; /* 너비 고정 */
+            flex-shrink: 0; /* 너비가 줄어들지 않도록 설정 */
+        }
+        .progress-bar-container {
+            flex-grow: 1;
+            height: 18px;
+            background-color: #e9ecef;
+            border-radius: 9px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #007bff;
+            width: 0%; /* JS에서 채워줌 */
+            transition: width 0.5s ease-in-out;
+            border-radius: 9px;
+        }
+        /* 퍼센트 텍스트를 위한 스타일 */
+        .percentage-text {
+            font-weight: 500;
+            width: 60px; /* 너비 고정으로 정렬 */
+            text-align: right;
+            flex-shrink: 0;
+            color: #495057;
+        }
+        
         #spinner {
             display: none;
             border: 4px solid #f3f3f3;
@@ -126,7 +188,6 @@
     </div>
 
     <script>
-        // JavaScript 로직은 이전에 수정한 최종본 그대로입니다. (완벽하게 작동합니다)
         const form = document.getElementById('predict');
         const fileInput = document.getElementById('file-input');
         const imagePreview = document.getElementById('image-preview');
@@ -145,6 +206,7 @@
                 resultContainer.innerHTML = '';
             }
         });
+
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -165,11 +227,35 @@
                 }
                 
                 const data = await response.json();
+                
+                if (data.error) { throw new Error(data.error); }
+
                 const confidence = parseFloat(data.confidence);
-                resultContainer.innerHTML = `
-                    <p><strong>예측 결과:</strong> ${data.predicted_class}</p>
-                    <p><strong>신뢰도:</strong> ${(confidence * 100).toFixed(2)}%</p>
-                `;
+                const topPredictionHTML = `
+                    <div class="top-prediction">
+                        가장 유력한 진단: <strong>${data.predicted_class}</strong> 
+                        (${(confidence * 100).toFixed(2)}%)
+                    </div>`;
+
+                const sortedProbs = Object.entries(data.all_predict)
+                    .sort(([,a],[,b]) => b - a);
+
+                // 💡 HTML 생성 로직을 새로운 CSS 구조에 맞게 수정
+                const allProbsHTML = sortedProbs.map(([className, prob]) => {
+                    const percentage = (prob * 100).toFixed(2);
+                    return `
+                        <li>
+                            <span class="class-name">${className}</span>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" style="width: ${percentage}%;"></div>
+                            </div>
+                            <span class="percentage-text">${percentage}%</span>
+                        </li>
+                    `;
+                }).join('');
+
+                resultContainer.innerHTML = topPredictionHTML + `<ul class="all-predict">${allProbsHTML}</ul>`;
+
             } catch (error) {
                 resultContainer.innerHTML = `<p style="color: red;">예측 실패: ${error.message}</p>`;
             } finally {
